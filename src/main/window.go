@@ -38,6 +38,7 @@ type window struct {
 
 func (w *window) onFolderSelect(uri string) {
 	w.spinner.Start()
+	w.spinner.Set("visible", true)
 	go w.lib.ImportFromDir(uri)
 }
 
@@ -167,6 +168,7 @@ func (w *window) onTagUntaggedClicked() {
 	w.inTask = true
 	w.setTagButtonsSensitive(false)
 	w.spinner.Start()
+	w.spinner.Set("visible", true)
 	go w.tagAlbums(a, w.taggingDone)
 }
 
@@ -179,6 +181,7 @@ func (w *window) onUntagTaggedClicked() {
 	w.inTask = true
 	w.setTagButtonsSensitive(false)
 	w.spinner.Start()
+	w.spinner.Set("visible", true)
 	go w.untagSongs(a, w.taggingDone)
 }
 
@@ -270,6 +273,7 @@ func (w *window) onTimer() bool {
 			w.inTask = false
 		case b := <-w.setSpinner:
 			w.spinner.Set("active", b)
+			w.spinner.Set("visible", b)
 		case ss := <-w.colSpinnerOn:
 			for _, s := range ss {
 				w.setSpinnerForSong(s, true)
