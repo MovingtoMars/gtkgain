@@ -16,7 +16,7 @@ deps_get: deps_clean
 	github.com/MovingtoMars/gotk3/gtk \
 	github.com/vchimishuk/chub/src/ogg/libvorbis \
 	github.com/wtolson/go-taglib \
-	&& mkdir -p ./_deps/src/github.com/MovingtoMars/gtkgain \
+	&& mkdir -p ./_deps/src/github.com/MovingtoMars/gtkgain/src \
 	&& cp -r ./src/library ./_deps/src/github.com/MovingtoMars/gtkgain/src
 
 build: vet deps_get
