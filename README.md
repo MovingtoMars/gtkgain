@@ -10,6 +10,8 @@ GtkGain depends on:
 flac libvorbis vorbisgain mp3gain taglib gtk>=3.10
 ```
 
+Binaries can be found at https://bintray.com/mvtm/generic/GtkGain/view
+
 To install GtkGain the Go way (provided you have Go set up and $GOPATH/bin added to your $PATH):
 ```bash
 $ go get github.com/MovingtoMars/gtkgain
