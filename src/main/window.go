@@ -73,7 +73,6 @@ func (w *window) setupHeaderBar() {
 	w.setTagButtonsSensitive(false)
 
 	w.spinner, err = gtk.SpinnerNew()
-	w.spinner.Set("visible", false)
 	w.headerBar.PackStart(w.spinner)
 }
 
@@ -339,6 +338,7 @@ func createWindow(lib *library.Library) *window {
 	w.win.SetDefaultSize(1000, 800)
 
 	w.win.ShowAll()
+	w.spinner.Set("visible", false)
 
 	w.songQueue = make([]*library.Song, 0)
 

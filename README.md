@@ -42,6 +42,11 @@ To install GtkGain the Go way (provided you have Go set up and $GOPATH/bin added
 $ go get github.com/MovingtoMars/gtkgain
 $ go install github.com/MovingtoMars/gtkgain
 ```
+## Screenshots
+
+![Screenshot on Arch Linux](http://i.imgur.com/GMFJvmU.png)
+![Screenshot on Ubuntu](http://i.imgur.com/vXEbuws.png)
+![Screenshot on Ubuntu](http://i.imgur.com/77MIanW.png)
 
 ## License
 
