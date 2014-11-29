@@ -73,6 +73,7 @@ func (w *window) setupHeaderBar() {
 	w.setTagButtonsSensitive(false)
 
 	w.spinner, err = gtk.SpinnerNew()
+	w.spinner.Set("visible", false)
 	w.headerBar.PackStart(w.spinner)
 }
 
