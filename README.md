@@ -1,11 +1,11 @@
 GtkGain
 =======
 
-GtkGain is a project written in Go which provides a GTK+3 frontend to vorbisgain, mp3gain, metaflac and libvorbis in order to show, add, and remove replaygain tack and album tags.
+GtkGain is a project written in Go which provides a GTK+3 frontend to vorbisgain, mp3gain, metaflac and libvorbis in order to show, add, and remove replaygain track and album tags.
 
 ## Installation
 
-GtkGain has the following depends on:
+GtkGain has the depends on:
 ```
 flac libvorbis vorbisgain mp3gain taglib gtk>=3.10
 ```
