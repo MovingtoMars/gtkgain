@@ -1,4 +1,4 @@
-.PHONY: build doc lint run vendor_clean vendor_get vendor_update vet install
+.PHONY: build doc lint run deps_clean deps_get vet install
 
 GOPATH := ${PWD}/_deps:${GOPATH}
 export GOPATH
@@ -24,12 +24,6 @@ doc:
 
 run: build
 	./bin/gtkgain
-
-deps_update: deps_get
-	rm -rf `find ./_deps/src -type d -name .git` \
-	&& rm -rf `find ./_deps/src -type d -name .hg` \
-	&& rm -rf `find ./_deps/src -type d -name .bzr` \
-	&& rm -rf `find ./_deps/src -type d -name .svn`
 
 vet:
 	go vet ./...
