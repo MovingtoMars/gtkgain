@@ -17,8 +17,10 @@ Note that some earlier versions of mp3gain are known to corrupt ID3v2 tags.
 For building:
 
 ```bash
-$ sudo apt-get golang golang-go.tools install libgtk-3-dev libtagc0-dev libvorbis-dev mp3gain flac vorbisgain
+$ sudo apt-get install golang golang-go.tools libgtk-3-dev libtagc0-dev libvorbis-dev mp3gain flac vorbisgain
 ```
+
+Make sure the `universe` repo is enabled in Software and Updates.
 
 ## Installation
 
