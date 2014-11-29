@@ -44,9 +44,9 @@ $ go install github.com/MovingtoMars/gtkgain
 ```
 ## Screenshots
 
-![Screenshot on Arch Linux](http://i.imgur.com/GMFJvmU.png)
-![Screenshot on Ubuntu](http://i.imgur.com/vXEbuws.png)
-![Screenshot on Ubuntu](http://i.imgur.com/77MIanW.png)
+![Screenshot on Arch Linux](http://i.imgur.com/GMFJvmU.png "Arch Linux")
+![Screenshot on Ubuntu](http://i.imgur.com/vXEbuws.png "Ubuntu")
+![Screenshot on Ubuntu](http://i.imgur.com/77MIanW.png "Ubuntu")
 
 ## License
 
