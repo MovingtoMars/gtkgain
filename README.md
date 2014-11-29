@@ -10,20 +10,17 @@ GtkGain depends on:
 flac libvorbis vorbisgain mp3gain taglib gtk>=3.10
 ```
 
-Installing the normal way:
------------------------
+### Installing the normal way:
 
 1. [Download](https://github.com/MovingtoMars/gtkgain/archive/master.zip) and extract the source
-2. Run `$ make`in the directory you extracted
+2. Use the `make`command in the directory you extracted
 3. Run the binary outputted to `bin/`
 
-Binaries
--------
+### Binaries
 
 Prebuilt versions of GtkGain can be found at https://bintray.com/mvtm/generic/GtkGain/view
 
-Installing the Go way
--------------------
+### Installing the Go way
 
 To install GtkGain the Go way (provided you have Go set up and $GOPATH/bin added to your $PATH):
 ```bash
