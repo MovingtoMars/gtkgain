@@ -6,7 +6,9 @@ GtkGain is a project written in Go which provides a GTK+3 frontend to vorbisgain
 ## Installation
 
 GtkGain has the following depends on:
-`flac libvorbis vorbisgain mp3gain taglib gtk>=3.10`
+```
+flac libvorbis vorbisgain mp3gain taglib gtk>=3.10
+```
 
 To install GtkGain the Go way (provided you have Go set up and $GOPATH/bin added to your $PATH):
 ```bash
@@ -16,4 +18,4 @@ $ go install github.com/MovingtoMars/gtkgain
 
 ## License
 
-GtkGain is licenses under the GNU GPLv3.0
+GtkGain is licensed under the GNU GPLv3.0
