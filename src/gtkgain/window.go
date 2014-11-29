@@ -19,16 +19,10 @@ type window struct {
 	columns   []*gtk.TreeViewColumn
 	paths     map[string]*gtk.TreePath
 
-	colSpinnerOn chan []*library.Song
-	queueDraw    chan bool
-
 	tagUntaggedButton, untagTaggedButton *gtk.Button
 	spinner                              *gtk.Spinner
-	finishLoadingChan, setSpinner        chan bool
-	taggingDone                          chan bool
 	fcButton                             *gtk.Button
 	inTask                               bool
-	setSongGainsChan                     chan *library.Song
 
 	songQueue     []*library.Song
 	songQueueLock sync.Mutex
@@ -39,6 +33,7 @@ type window struct {
 func (w *window) onFolderSelect(uri string) {
 	w.spinner.Start()
 	w.spinner.Set("visible", true)
+	// TODO allow user to queue imports
 	go w.lib.ImportFromDir(uri)
 }
 
@@ -55,14 +50,18 @@ func (w *window) setupHeaderBar() {
 	w.headerBar.SetTitle("GtkGain")
 	w.win.SetTitlebar(w.headerBar)
 
-	// TODO handle errs
 	w.fcButton, err = gtk.ButtonNewFromIconName("document-open-symbolic", gtk.ICON_SIZE_BUTTON)
 	crashIf("Unable to create folder chooser button", err)
 	w.headerBar.PackEnd(w.fcButton)
 	w.fcButton.Connect("clicked", w.onFcButtonClick)
+	w.fcButton.SetTooltipText("Add a folder")
 
 	w.tagUntaggedButton, err = gtk.ButtonNewWithLabel("Tag Untagged")
+	crashIf("Unable to create taguntagged button", err)
+	w.tagUntaggedButton.SetTooltipText("Calculate ReplayGain for all untagged files")
+	crashIf("Unable to create untagtagged button", err)
 	w.untagTaggedButton, err = gtk.ButtonNewWithLabel("Untag Tagged")
+	w.untagTaggedButton.SetTooltipText("Remove ReplayGain from all tagged files")
 
 	w.headerBar.PackStart(w.tagUntaggedButton)
 	w.headerBar.PackStart(w.untagTaggedButton)
@@ -73,6 +72,7 @@ func (w *window) setupHeaderBar() {
 	w.setTagButtonsSensitive(false)
 
 	w.spinner, err = gtk.SpinnerNew()
+	crashIf("Unable to create spinner", err)
 	w.headerBar.PackStart(w.spinner)
 }
 
@@ -82,8 +82,7 @@ func (w *window) setTagButtonsSensitive(s bool) {
 }
 
 func (w *window) onSongUpdate(s *library.Song) {
-	w.setSongGainsChan <- s
-
+	glib.IdleAdd(func() {w.setSongGains(s)})
 }
 
 func (w *window) setSongGains(s *library.Song) {
@@ -110,7 +109,7 @@ func (w *window) setSongGains(s *library.Song) {
 
 const NUM_HELPERS = 4
 
-func (w *window) tagAlbums(albums []*library.Album, onDone chan bool) {
+func (w *window) tagAlbums(albums []*library.Album) {
 	tasks := make(chan *library.Album, 0)
 
 	go func() {
@@ -133,30 +132,48 @@ func (w *window) tagAlbums(albums []*library.Album, onDone chan bool) {
 					fmt.Println("ret")
 					return
 				}
-				w.colSpinnerOn <- at.GetSongs()
+				
+				paths := make([]string, len(at.GetSongs()))
+				for i, so := range at.GetSongs() {
+					paths[i] = so.Path()
+				}
+				
+				glib.IdleAdd(func() {
+					for _, s := range paths {
+						w.setSpinnerForSong(s, true)
+					}
+					w.treeView.QueueDraw()
+				})
+				
 				err := at.TagGain(w.onSongUpdate)
 				if err != nil {
 					log.Println(err)
 				}
-				w.queueDraw <- true
+				glib.IdleAdd(func() {w.treeView.QueueDraw()})
 			}
 		}(tasks)
 	}
 
 	wg.Wait()
-	onDone <- true
-	w.setSpinner <- false
+	glib.IdleAdd(func() {
+		w.inTask = false
+		w.setSpinner(false)
+		w.setTagButtonsSensitive(true)
+	})
 }
 
-func (w *window) untagSongs(songs []*library.Song, onDone chan bool) {
+func (w *window) untagSongs(songs []*library.Song) {
 	err := library.SongsUntagGain(songs, w.onSongUpdate)
 	if err != nil {
 		log.Println("Error untagging songs:", err)
 	}
 
-	w.queueDraw <- true
-	onDone <- true
-	w.setSpinner <- false
+	glib.IdleAdd(func() {
+		w.inTask = false
+		w.treeView.QueueDraw()
+		w.setSpinner(false)
+		w.setTagButtonsSensitive(true)
+	})
 }
 
 func (w *window) onTagUntaggedClicked() {
@@ -169,7 +186,7 @@ func (w *window) onTagUntaggedClicked() {
 	w.setTagButtonsSensitive(false)
 	w.spinner.Start()
 	w.spinner.Set("visible", true)
-	go w.tagAlbums(a, w.taggingDone)
+	go w.tagAlbums(a)
 }
 
 func (w *window) onUntagTaggedClicked() {
@@ -182,7 +199,7 @@ func (w *window) onUntagTaggedClicked() {
 	w.setTagButtonsSensitive(false)
 	w.spinner.Start()
 	w.spinner.Set("visible", true)
-	go w.untagSongs(a, w.taggingDone)
+	go w.untagSongs(a)
 }
 
 const (
@@ -227,9 +244,15 @@ func (w *window) addColumn(id int, name string, resizable bool) *gtk.TreeViewCol
 }
 
 func (w *window) onLoadFinish() {
-	w.finishLoadingChan <- true
-	w.setSpinner <- false
-	//glib.IdleAdd(w.finishLoadingChan, true)
+	glib.IdleAdd(func() {
+		w.setTagButtonsSensitive(true)
+		w.setSpinner(false)
+	})
+}
+
+func (w *window) setSpinner(b bool) {
+	w.spinner.Set("active", b)
+	w.spinner.Set("visible", b)
 }
 
 func (w *window) onSongImport(s *library.Song) {
@@ -238,8 +261,8 @@ func (w *window) onSongImport(s *library.Song) {
 	w.songQueueLock.Unlock()
 }
 
-func (w *window) setSpinnerForSong(s *library.Song, going bool) {
-	path := w.paths[s.Path()]
+func (w *window) setSpinnerForSong(spath string, going bool) {
+	path := w.paths[spath]
 	if path == nil {
 		log.Fatal("path is nil")
 	}
@@ -247,7 +270,7 @@ func (w *window) setSpinnerForSong(s *library.Song, going bool) {
 	crashIf("Unable to convert path to iter", err)
 
 	if val, err := w.listStore.GetValue(iter, COL_PATH); err == nil {
-		if str, _ := val.GetString(); str == s.Path() {
+		if str, _ := val.GetString(); str == spath {
 			//w.listStore.Set(iter, []int{COL_SPIN}, []interface{} {going})
 			w.listStore.Set(iter, []int{COL_AGAIN, COL_TGAIN}, []interface{}{"···", "···"})
 		}
@@ -266,23 +289,6 @@ func (w *window) onTimer() bool {
 
 	for !all {
 		select {
-		case b := <-w.finishLoadingChan:
-			w.setTagButtonsSensitive(b)
-		case <-w.taggingDone:
-			w.setTagButtonsSensitive(true)
-			w.inTask = false
-		case b := <-w.setSpinner:
-			w.spinner.Set("active", b)
-			w.spinner.Set("visible", b)
-		case ss := <-w.colSpinnerOn:
-			for _, s := range ss {
-				w.setSpinnerForSong(s, true)
-			}
-			w.treeView.QueueDraw()
-		case <-w.queueDraw:
-			w.treeView.QueueDraw()
-		case s := <-w.setSongGainsChan:
-			w.setSongGains(s)
 		default:
 			all = true
 		}
@@ -317,13 +323,7 @@ func createWindow(lib *library.Library) *window {
 
 	lib.SetSongLoadReceiver(w.onSongImport)
 	lib.SetLoadFinishReceiver(w.onLoadFinish)
-	w.finishLoadingChan = make(chan bool, 2)
-	w.queueDraw = make(chan bool, 2)
-	w.taggingDone = make(chan bool, 1)
-	w.setSpinner = make(chan bool, 1)
-	w.colSpinnerOn = make(chan []*library.Song, NUM_HELPERS)
 	w.paths = make(map[string]*gtk.TreePath)
-	w.setSongGainsChan = make(chan *library.Song, NUM_HELPERS*20)
 
 	var err error
 
