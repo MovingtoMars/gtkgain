@@ -32,17 +32,16 @@ Make sure the `universe` repo is enabled in Software and Updates.
 4. `$ make`
 5. `$ sudo make install`
 
-### Binaries
-
-Prebuilt versions of GtkGain can be found at https://bintray.com/mvtm/generic/GtkGain/view
-
 ### Installing the Go way
 
 To install GtkGain the Go way (provided you have Go set up and $GOPATH/bin added to your $PATH):
 ```bash
-$ go get github.com/MovingtoMars/gtkgain
-$ go install github.com/MovingtoMars/gtkgain
+$ go get github.com/MovingtoMars/gtkgain/src/gtkgain
+$ go install github.com/MovingtoMars/gtkgain/src/gtkgain
 ```
+
+You can then run GtkGain from your terminal by typing `gtkgain`.
+
 ## Screenshots
 
 ### Arch Linux
