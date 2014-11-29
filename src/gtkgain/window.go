@@ -334,7 +334,9 @@ func createWindow(lib *library.Library) *window {
 
 	w.setupHeaderBar()
 	w.setupTreeView()
-
+	
+	w.win.SetIconName("gtkgain")
+	
 	w.win.SetDefaultSize(1000, 800)
 
 	w.win.ShowAll()

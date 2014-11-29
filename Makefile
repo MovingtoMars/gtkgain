@@ -1,8 +1,5 @@
-.PHONY: build doc lint run vendor_clean vendor_get vendor_update vet
+.PHONY: build doc lint run vendor_clean vendor_get vendor_update vet install
 
-# Prepend our _vendor directory to the system GOPATH
-# so that import path resolution will prioritize
-# our third party snapshots.
 GOPATH := ${PWD}/_deps:${GOPATH}
 export GOPATH
 
@@ -20,7 +17,7 @@ deps_get: deps_clean
 	&& cp -r ./src/library ./_deps/src/github.com/MovingtoMars/gtkgain/src
 
 build: vet deps_get
-	go build -tags=gtk_3_10 -v -o ./bin/gtkgain ./src/main
+	@go build -tags=gtk_3_10 -v -o ./bin/gtkgain ./src/gtkgain
 
 doc:
 	godoc -http=:6060 -index
@@ -34,7 +31,26 @@ deps_update: deps_get
 	&& rm -rf `find ./_deps/src -type d -name .bzr` \
 	&& rm -rf `find ./_deps/src -type d -name .svn`
 
-# http://godoc.org/code.google.com/p/go.tools/cmd/vet
-# go get code.google.com/p/go.tools/cmd/vet
 vet:
 	go vet ./...
+
+install:
+	@mkdir -p ${INSTALL_ROOT}/usr/bin \
+	&& cp ./bin/gtkgain ${INSTALL_ROOT}/usr/bin \
+	&& mkdir -p ${INSTALL_ROOT}/usr/share/applications \
+	&& cp ./gtkgain.desktop ${INSTALL_ROOT}/usr/share/applications \
+	&& mkdir -p ${INSTALL_ROOT}/usr/share/icons/hicolor/22x22/apps \
+	&& cp ./src/icons/22x22/gtkgain.png ${INSTALL_ROOT}/usr/share/icons/hicolor/22x22/apps \
+	&& mkdir -p ${INSTALL_ROOT}/usr/share/icons/hicolor/24x24/apps \
+	&& cp ./src/icons/24x24/gtkgain.png ${INSTALL_ROOT}/usr/share/icons/hicolor/24x24/apps \
+	&& mkdir -p ${INSTALL_ROOT}/usr/share/icons/hicolor/32x32/apps \
+	&& cp ./src/icons/32x32/gtkgain.png ${INSTALL_ROOT}/usr/share/icons/hicolor/32x32/apps \
+	&& mkdir -p ${INSTALL_ROOT}/usr/share/icons/hicolor/48x48/apps \
+	&& cp ./src/icons/48x48/gtkgain.png ${INSTALL_ROOT}/usr/share/icons/hicolor/48x48/apps \
+	&& mkdir -p ${INSTALL_ROOT}/usr/share/icons/hicolor/64x64/apps \
+	&& cp ./src/icons/64x64/gtkgain.png ${INSTALL_ROOT}/usr/share/icons/hicolor/64x64/apps \
+	&& mkdir -p ${INSTALL_ROOT}/usr/share/icons/hicolor/128x128/apps \
+	&& cp ./src/icons/128x128/gtkgain.png ${INSTALL_ROOT}/usr/share/icons/hicolor/128x128/apps \
+	&& mkdir -p ${INSTALL_ROOT}/usr/share/icons/hicolor/256x256/apps \
+	&& cp ./src/icons/256x256/gtkgain.png ${INSTALL_ROOT}/usr/share/icons/hicolor/256x256/apps \
+	&& xdg-icon-resource forceupdate --theme hicolor &> /dev/null

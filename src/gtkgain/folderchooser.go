@@ -29,6 +29,8 @@ func (w *window) showFolderChooser(callback func(uri string)) {
 	cancel, _ := gtk.ButtonNewWithLabel("Cancel")
 	hbar.PackStart(cancel)
 	cancel.Connect("clicked", func() { dialog.Destroy() })
-
+	
+	dialog.SetIconName("gtkgain")
+	
 	dialog.ShowAll()
 }

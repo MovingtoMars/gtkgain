@@ -28,8 +28,9 @@ Make sure the `universe` repo is enabled in Software and Updates.
 
 1. Install the build dependencies (command for Ubuntu shown above)
 2. [Download](https://github.com/MovingtoMars/gtkgain/archive/master.zip) and extract the source
-3. Use the `make`command in the directory you extracted
-4. Run the binary outputted to `bin/`
+3. `$ cd /path/to/gtkgain/`
+4. `$ make`
+5. `$ sudo make install`
 
 ### Binaries
 

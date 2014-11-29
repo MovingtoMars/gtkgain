@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=GtkGain
+Comment=Tool for editing ReplayGain tags
+Exec=gtkgain
+Icon=gtkgain
+Terminal=false
+Categories=AudioVideo;Audio;AudioVideoEditing;
