@@ -5,12 +5,17 @@ GtkGain is a project written in Go which provides a GTK+3 frontend to vorbisgain
 
 ## Dependencies
 
-GtkGain depends on:
+Runtime:
 ```
-flac libvorbis vorbisgain mp3gain taglib gtk>=3.10
+libvorbis taglib gtk>=3.10 vorbisgain mp3gain flac
 ```
 
-Note that some earlier versions of mp3gain are known to corrupt ID3v2 tags.
+Build-only dependencies:
+```
+git golang
+```
+
+Note that development versions of the first three runtime dependencies are required for building.
 
 ### Ubuntu
 
