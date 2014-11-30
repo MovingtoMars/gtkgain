@@ -16,9 +16,10 @@ type window struct {
 	headerBar *gtk.HeaderBar
 	treeView  *gtk.TreeView
 	listStore *gtk.ListStore
-	columns   []*gtk.TreeViewColumn
 	paths     map[string]*gtk.TreePath
-
+	
+	importHelperChan chan string
+	
 	tagUntaggedButton, untagTaggedButton *gtk.Button
 	spinner                              *gtk.Spinner
 	fcButton                             *gtk.Button
@@ -30,11 +31,19 @@ type window struct {
 	lib *library.Library
 }
 
-func (w *window) onFolderSelect(uri string) {
-	w.spinner.Start()
-	w.spinner.Set("visible", true)
-	// TODO allow user to queue imports
-	go w.lib.ImportFromDir(uri)
+func (w *window) importHelper() {
+	for {
+		select {
+		case path := <- w.importHelperChan:
+			w.lib.ImportFromDir(path)
+		}	
+	}
+}
+
+func (w *window) onFolderSelect(path string) {
+	w.setSpinner(true)
+	
+	w.importHelperChan <- path
 }
 
 func (w *window) onFcButtonClick(b *gtk.Button) {
@@ -184,8 +193,7 @@ func (w *window) onTagUntaggedClicked() {
 
 	w.inTask = true
 	w.setTagButtonsSensitive(false)
-	w.spinner.Start()
-	w.spinner.Set("visible", true)
+	w.setSpinner(true)
 	go w.tagAlbums(a)
 }
 
@@ -197,8 +205,7 @@ func (w *window) onUntagTaggedClicked() {
 
 	w.inTask = true
 	w.setTagButtonsSensitive(false)
-	w.spinner.Start()
-	w.spinner.Set("visible", true)
+	w.setSpinner(true)
 	go w.untagSongs(a)
 }
 
@@ -226,9 +233,8 @@ func (w *window) setupTreeView() {
 	w.win.Add(w.scroll)
 	w.scroll.Add(w.treeView)
 
-	w.columns = make([]*gtk.TreeViewColumn, len(columnList))
 	for _, i := range columnList {
-		w.columns[i] = w.addColumn(i, columnNames[i], true)
+		w.addColumn(i, columnNames[i], true)
 	}
 	w.treeView.Set("search-column", COL_TITLE)
 }
@@ -324,7 +330,8 @@ func createWindow(lib *library.Library) *window {
 	lib.SetSongLoadReceiver(w.onSongImport)
 	lib.SetLoadFinishReceiver(w.onLoadFinish)
 	w.paths = make(map[string]*gtk.TreePath)
-
+	w.importHelperChan = make(chan string, 50)
+	
 	var err error
 
 	w.win, err = gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
@@ -343,7 +350,9 @@ func createWindow(lib *library.Library) *window {
 	w.spinner.Set("visible", false)
 
 	w.songQueue = make([]*library.Song, 0)
-
+	
+	go w.importHelper()
+	
 	glib.TimeoutAdd(100, w.onTimer)
 
 	return w
