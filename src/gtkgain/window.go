@@ -3,9 +3,9 @@ package main
 import (
 	"github.com/MovingtoMars/gotk3/glib"
 	"github.com/MovingtoMars/gotk3/gtk"
+	//"github.com/MovingtoMars/gotk3/gdk"
 	"github.com/MovingtoMars/gtkgain/src/library"
 
-	"fmt"
 	"log"
 	"sync"
 )
@@ -42,7 +42,6 @@ func (w *window) importHelper() {
 
 func (w *window) onFolderSelect(path string) {
 	w.setSpinner(true)
-	
 	w.importHelperChan <- path
 }
 
@@ -124,7 +123,6 @@ func (w *window) tagAlbums(albums []*library.Album) {
 	go func() {
 		for _, a := range albums {
 			tasks <- a
-			fmt.Println("task")
 		}
 		close(tasks)
 	}()
@@ -138,7 +136,6 @@ func (w *window) tagAlbums(albums []*library.Album) {
 
 				at, ok := <-taskChan
 				if !ok {
-					fmt.Println("ret")
 					return
 				}
 				
@@ -168,6 +165,7 @@ func (w *window) tagAlbums(albums []*library.Album) {
 		w.inTask = false
 		w.setSpinner(false)
 		w.setTagButtonsSensitive(true)
+		w.fcButton.SetSensitive(true)
 	})
 }
 
@@ -182,6 +180,7 @@ func (w *window) untagSongs(songs []*library.Song) {
 		w.treeView.QueueDraw()
 		w.setSpinner(false)
 		w.setTagButtonsSensitive(true)
+		w.fcButton.SetSensitive(true)
 	})
 }
 
@@ -192,6 +191,7 @@ func (w *window) onTagUntaggedClicked() {
 	}
 
 	w.inTask = true
+	w.fcButton.SetSensitive(false)
 	w.setTagButtonsSensitive(false)
 	w.setSpinner(true)
 	go w.tagAlbums(a)
@@ -204,6 +204,7 @@ func (w *window) onUntagTaggedClicked() {
 	}
 
 	w.inTask = true
+	w.fcButton.SetSensitive(false)
 	w.setTagButtonsSensitive(false)
 	w.setSpinner(true)
 	go w.untagSongs(a)
@@ -237,6 +238,10 @@ func (w *window) setupTreeView() {
 		w.addColumn(i, columnNames[i], true)
 	}
 	w.treeView.Set("search-column", COL_TITLE)
+	
+	/*tentry, _ := gtk.TargetEntryNew("text/uri-list", gtk.TARGET_OTHER_APP, 0)
+	w.fcButton.DragDestSet(gtk.DEST_DEFAULT_HIGHLIGHT, []gtk.TargetEntry {*tentry}, gdk.ACTION_DEFAULT)
+	w.fcButton.Connect("drag-motion", w.onDragMotion)*/
 }
 
 func (w *window) addColumn(id int, name string, resizable bool) *gtk.TreeViewColumn {
@@ -248,6 +253,10 @@ func (w *window) addColumn(id int, name string, resizable bool) *gtk.TreeViewCol
 	col.Set("resizable", resizable)
 	return col
 }
+
+/*func (w *window) onDragMotion(widget *gtk.Button, dc *gdk.DragContext, x, y int, time uint) {
+	fmt.Println("test", x, y, gdk.Atom(dc.ListTargets().Data).Name())
+}*/
 
 func (w *window) onLoadFinish() {
 	glib.IdleAdd(func() {

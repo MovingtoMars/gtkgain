@@ -154,8 +154,8 @@ func SongsUntagGain(list []*Song, songUpdateReceiver func(*Song)) error {
 	mp3UntagGain(mp3)
 	
 	for _, s := range list {
-		s.tgain = s.LoadTrackGain()
-		s.again = s.LoadAlbumGain()
+		s.tgain = "?"
+		s.again = "?"
 		s.album.tagged = false
 		songUpdateReceiver(s)
 	}

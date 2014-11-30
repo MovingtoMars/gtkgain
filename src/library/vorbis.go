@@ -21,7 +21,7 @@ func vorbisGetTagGain(path, tag string) string {
 }
 
 func vorbisTagGainAlbum(path []string) error {
-	cmd := exec.Command("vorbisgain", append([]string {"-a"}, path...)...)
+	cmd := exec.Command("vorbisgain", append([]string {"-aq"}, path...)...)
 	_, err := cmd.CombinedOutput()
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func vorbisTagGainAlbum(path []string) error {
 }
 
 func vorbisUntagGain(path []string) error {
-	cmd := exec.Command("vorbisgain", append([]string {"-c"}, path...)...)
+	cmd := exec.Command("vorbisgain", append([]string {"-cq"}, path...)...)
 	_, err := cmd.CombinedOutput()
 	if err != nil {
 		return err
