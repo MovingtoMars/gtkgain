@@ -78,6 +78,7 @@ func (s *Song) AlbumGain() string {
 	return s.again
 }
 
+// TODO merge this and album function into one, with each type being optional
 func (s *Song) LoadTrackGain() string {
 	ret := ""
 	switch s.format {

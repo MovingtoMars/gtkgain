@@ -8,6 +8,8 @@ import (
 
 	"log"
 	"sync"
+	"strconv"
+	"fmt"
 )
 
 type window struct {
@@ -16,6 +18,9 @@ type window struct {
 	headerBar *gtk.HeaderBar
 	treeView  *gtk.TreeView
 	listStore *gtk.ListStore
+	vbox      *gtk.Box // vertical box
+	bottomBox      *gtk.Box // bottom box
+	pbar      *gtk.ProgressBar
 	paths     map[string]*gtk.TreePath
 	
 	importHelperChan chan string
@@ -24,6 +29,7 @@ type window struct {
 	spinner                              *gtk.Spinner
 	fcButton                             *gtk.Button
 	inTask                               bool
+	taskProgress, taskTotal int
 
 	songQueue     []*library.Song
 	songQueueLock sync.Mutex
@@ -78,6 +84,7 @@ func (w *window) setupHeaderBar() {
 	w.untagTaggedButton.Connect("clicked", w.onUntagTaggedClicked)
 
 	w.setTagButtonsSensitive(false)
+	w.fcButton.SetSensitive(true)
 
 	w.spinner, err = gtk.SpinnerNew()
 	crashIf("Unable to create spinner", err)
@@ -87,10 +94,22 @@ func (w *window) setupHeaderBar() {
 func (w *window) setTagButtonsSensitive(s bool) {
 	w.tagUntaggedButton.SetSensitive(s)
 	w.untagTaggedButton.SetSensitive(s)
+	w.fcButton.SetSensitive(s)
 }
 
 func (w *window) onSongUpdate(s *library.Song) {
 	glib.IdleAdd(func() {w.setSongGains(s)})
+}
+
+func (w *window) setProgressBarFraction(cur, total int) {
+	w.pbar.SetFraction(float64(cur) / float64(total))
+	stotal := strconv.FormatInt(int64(total), 10)
+	w.pbar.SetText(fmt.Sprintf("%*d / %s", len(stotal), cur, stotal))
+}
+
+func (w *window) incProgressBarFraction(delta int) {
+	w.taskProgress += delta
+	w.setProgressBarFraction(w.taskProgress, w.taskTotal)
 }
 
 func (w *window) setSongGains(s *library.Song) {
@@ -119,7 +138,15 @@ const NUM_HELPERS = 4
 
 func (w *window) tagAlbums(albums []*library.Album) {
 	tasks := make(chan *library.Album, 0)
-
+	
+	w.taskTotal = 0
+	for _, al := range albums {
+		w.taskTotal += len(al.GetSongs())
+	}
+	
+	w.taskProgress = 0
+	w.setProgressBarFraction(0, w.taskTotal)
+	
 	go func() {
 		for _, a := range albums {
 			tasks <- a
@@ -133,7 +160,6 @@ func (w *window) tagAlbums(albums []*library.Album) {
 		go func(taskChan chan *library.Album) {
 			defer wg.Done()
 			for {
-
 				at, ok := <-taskChan
 				if !ok {
 					return
@@ -143,6 +169,7 @@ func (w *window) tagAlbums(albums []*library.Album) {
 				for i, so := range at.GetSongs() {
 					paths[i] = so.Path()
 				}
+				numSongs := len(paths)
 				
 				glib.IdleAdd(func() {
 					for _, s := range paths {
@@ -155,21 +182,26 @@ func (w *window) tagAlbums(albums []*library.Album) {
 				if err != nil {
 					log.Println(err)
 				}
-				glib.IdleAdd(func() {w.treeView.QueueDraw()})
+				glib.IdleAdd(func() {
+					w.incProgressBarFraction(numSongs)
+					w.treeView.QueueDraw()
+				})
 			}
 		}(tasks)
 	}
-
+	
 	wg.Wait()
 	glib.IdleAdd(func() {
 		w.inTask = false
 		w.setSpinner(false)
 		w.setTagButtonsSensitive(true)
-		w.fcButton.SetSensitive(true)
+		//w.fcButton.SetSensitive(true)
+		w.bottomBox.Set("visible", false)
 	})
 }
 
 func (w *window) untagSongs(songs []*library.Song) {
+	// TODO make this use multiple goroutines. Perhaps divide song list up into groups ie. of 20?
 	err := library.SongsUntagGain(songs, w.onSongUpdate)
 	if err != nil {
 		log.Println("Error untagging songs:", err)
@@ -180,7 +212,7 @@ func (w *window) untagSongs(songs []*library.Song) {
 		w.treeView.QueueDraw()
 		w.setSpinner(false)
 		w.setTagButtonsSensitive(true)
-		w.fcButton.SetSensitive(true)
+		//w.fcButton.SetSensitive(true)
 	})
 }
 
@@ -191,9 +223,10 @@ func (w *window) onTagUntaggedClicked() {
 	}
 
 	w.inTask = true
-	w.fcButton.SetSensitive(false)
+	//w.fcButton.SetSensitive(false)
 	w.setTagButtonsSensitive(false)
 	w.setSpinner(true)
+	w.bottomBox.Set("visible", true)
 	go w.tagAlbums(a)
 }
 
@@ -204,7 +237,7 @@ func (w *window) onUntagTaggedClicked() {
 	}
 
 	w.inTask = true
-	w.fcButton.SetSensitive(false)
+	//w.fcButton.SetSensitive(false)
 	w.setTagButtonsSensitive(false)
 	w.setSpinner(true)
 	go w.untagSongs(a)
@@ -231,7 +264,7 @@ func (w *window) setupTreeView() {
 	crashIf("Unable to create tree view", err)
 
 	w.scroll, err = gtk.ScrolledWindowNew(nil, nil)
-	w.win.Add(w.scroll)
+	w.vbox.PackStart(w.scroll, true, true, 0)
 	w.scroll.Add(w.treeView)
 
 	for _, i := range columnList {
@@ -349,6 +382,17 @@ func createWindow(lib *library.Library) *window {
 	w.win.Connect("destroy", w.onDestroy)
 
 	w.setupHeaderBar()
+	
+	w.vbox, _ = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	w.bottomBox, _ = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	w.vbox.PackEnd(w.bottomBox, false, false, 8)
+	w.win.Add(w.vbox)
+	
+	w.pbar, _ = gtk.ProgressBarNew()
+	w.pbar.SetFraction(0.0)
+	w.pbar.SetShowText(true)
+	w.bottomBox.PackStart(w.pbar, true, true, 16)
+	
 	w.setupTreeView()
 	
 	w.win.SetIconName("gtkgain")
@@ -357,6 +401,7 @@ func createWindow(lib *library.Library) *window {
 
 	w.win.ShowAll()
 	w.spinner.Set("visible", false)
+	w.bottomBox.Set("visible", false)
 
 	w.songQueue = make([]*library.Song, 0)
 	
