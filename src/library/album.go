@@ -58,7 +58,7 @@ func (v *Album) TagGain(songUpdateReceiver func(*Song)) error {
 	case UNKNOWN:
 		return errors.New("can't tag unknown/inconsistently formatted album")
 	default:
-		return errors.New("unknown format type")
+		return ErrUnknownFormat
 	}
 	
 	for _, s := range v.songs {

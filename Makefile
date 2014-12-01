@@ -47,4 +47,5 @@ install:
 	&& cp ./src/icons/128x128/gtkgain.png ${INSTALL_ROOT}/usr/share/icons/hicolor/128x128/apps \
 	&& mkdir -p ${INSTALL_ROOT}/usr/share/icons/hicolor/256x256/apps \
 	&& cp ./src/icons/256x256/gtkgain.png ${INSTALL_ROOT}/usr/share/icons/hicolor/256x256/apps \
-	&& xdg-icon-resource forceupdate --theme hicolor &> /dev/null
+	&& xdg-icon-resource forceupdate --theme hicolor &> /dev/null \
+	&& update-desktop-database -q

@@ -24,6 +24,8 @@ const (
 	FLAC
 )
 
+var ErrUnknownFormat = errors.New("unknown audio format")
+
 func (v AudioFormat) String() string {
 	switch v {
 	case UNKNOWN:
@@ -121,9 +123,9 @@ func (s *Song) UntagGain(songUpdateReceiver func(*Song)) error {
 	case OGG_VORBIS:
 		err = vorbisUntagGain([]string {s.path})
 	case UNKNOWN:
-		return errors.New("can't tag unknown/inconsistent formatted album")
+		return ErrUnknownFormat
 	default:
-		return errors.New("unknown format type")
+		return ErrUnknownFormat
 	}
 	
 	s.gainLock.Lock()
@@ -148,7 +150,7 @@ func SongsUntagGain(list []*Song, songUpdateReceiver func(*Song)) error {
 		case MP3:
 			mp3 = append(mp3, s.path)
 		default:
-			err = errors.New("unknown format type")
+			err = ErrUnknownFormat
 		}
 	}
 	
