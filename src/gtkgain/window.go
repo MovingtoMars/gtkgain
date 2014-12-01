@@ -22,6 +22,7 @@ type window struct {
 	bottomBox      *gtk.Box // bottom box
 	pbar      *gtk.ProgressBar
 	paths     map[string]*gtk.TreePath
+	menu *gtk.Menu
 	
 	importHelperChan chan string
 	
@@ -63,6 +64,8 @@ func (w *window) setupHeaderBar() {
 	w.headerBar.SetShowCloseButton(true)
 	w.headerBar.SetTitle("GtkGain")
 	w.win.SetTitlebar(w.headerBar)
+	
+	w.setupMenu()
 
 	w.fcButton, err = gtk.ButtonNewFromIconName("document-open-symbolic", gtk.ICON_SIZE_BUTTON)
 	crashIf("Unable to create folder chooser button", err)
@@ -290,6 +293,27 @@ func (w *window) addColumn(id int, name string, resizable bool) *gtk.TreeViewCol
 /*func (w *window) onDragMotion(widget *gtk.Button, dc *gdk.DragContext, x, y int, time uint) {
 	fmt.Println("test", x, y, gdk.Atom(dc.ListTargets().Data).Name())
 }*/
+
+func (w *window) setupMenu() {
+	menuButton, err := gtk.MenuButtonNew()
+	crashIf("Unable to create menu button", err)
+	menuButton.SetDirection(gtk.ARROW_NONE)
+	im, err := gtk.ImageNewFromIconName("view-more-symbolic", gtk.ICON_SIZE_BUTTON)
+	crashIf("Unable to create image", err)
+	menuButton.SetImage(im)
+	
+	w.menu, err = gtk.MenuNew()
+	crashIf("Unable to create menu", err)
+	menuButton.SetPopup(w.menu)
+	
+	w.headerBar.PackEnd(menuButton)
+	
+	about, _ := gtk.MenuItemNewWithLabel("About")
+	about.Connect("activate", func() {w.showAboutDialog()})
+	w.menu.Append(about)
+	
+	w.menu.ShowAll()
+}
 
 func (w *window) onLoadFinish() {
 	glib.IdleAdd(func() {
