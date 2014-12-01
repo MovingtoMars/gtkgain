@@ -90,8 +90,8 @@ func (l *Library) ImportSong(path string) {
 	
 	album := l.openAlbum(tags.Album(), tags.Artist())
 	s := &Song {format: form, path: path, title: tags.Title(), track: tags.Track(), album: album}
-	s.tgain = s.LoadTrackGain()
-	s.again = s.LoadAlbumGain()
+	s.tgain, _ = s.LoadGain(GAIN_TRACK)
+	s.again, _ = s.LoadGain(GAIN_ALBUM)
 	album.addSong(s)
 	
 	tags.Close()
@@ -128,7 +128,7 @@ func (l *Library) TaggedSongs() []*Song {
 	ret := make([]*Song, 0)
 	for _, a := range l.albums {
 		for _, s := range a.songs {
-			if s.TrackGain() != "?" || s.AlbumGain() != "?" {
+			if s.Gain(GAIN_TRACK) != "?" || s.Gain(GAIN_ALBUM) != "?" {
 				ret = append(ret, s)
 			}
 		}

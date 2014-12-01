@@ -122,7 +122,7 @@ func (w *window) setSongGains(s *library.Song) {
 
 	if val, err := w.listStore.GetValue(iter, COL_PATH); err == nil {
 		if str, _ := val.GetString(); str == s.Path() {
-			w.listStore.Set(iter, []int{COL_AGAIN, COL_TGAIN}, []interface{}{s.AlbumGain(), s.TrackGain()})
+			w.listStore.Set(iter, []int{COL_AGAIN, COL_TGAIN}, []interface{}{s.Gain(library.GAIN_ALBUM), s.Gain(library.GAIN_TRACK)})
 		}
 	}
 	/*for iter, b := w.listStore.GetIterFirst(); b; b = w.listStore.IterNext(iter) {
@@ -354,7 +354,7 @@ func (w *window) appendSong(song *library.Song) {
 
 	iter := w.listStore.Append()
 	err := w.listStore.Set(iter, []int{COL_TRACK, COL_TITLE, COL_ALBUM, COL_TGAIN, COL_AGAIN, COL_PATH},
-		[]interface{}{song.Track(), song.Title(), song.AlbumName(), song.TrackGain(), song.AlbumGain(), song.Path()})
+		[]interface{}{song.Track(), song.Title(), song.AlbumName(), song.Gain(library.GAIN_TRACK), song.Gain(library.GAIN_ALBUM), song.Path()})
 	crashIf("Unable to add song", err)
 
 	path, err := w.listStore.GetPath(iter)

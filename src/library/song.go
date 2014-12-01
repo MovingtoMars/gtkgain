@@ -2,6 +2,7 @@ package library
 
 import (
 	"errors"
+	"sync"
 )
 
 type GainType int
@@ -10,6 +11,8 @@ const (
 	GAIN_TRACK GainType = iota
 	GAIN_ALBUM
 )
+
+var ErrUnknownGainType = errors.New("unknown gain type")
 
 // TODO locks for gain
 type AudioFormat int
@@ -42,6 +45,7 @@ type Song struct {
 	track int
 	album *Album
 	tgain, again string
+	gainLock sync.Mutex
 }
 
 func (s *Song) String() string {
@@ -64,53 +68,49 @@ func (s *Song) Path() string {
 	return s.path
 }
 
-func (s *Song) TrackGain() string {
-	/*if s.tgain == "" {
-		return "?"
-	}*/
-	return s.tgain
+// MT safe
+func (s *Song) Gain(t GainType) (ret string) {
+	s.gainLock.Lock()
+	switch t {
+	case GAIN_ALBUM:
+		ret = s.again
+	case GAIN_TRACK:
+		ret = s.tgain
+	default:
+		ret = ""
+	}
+	s.gainLock.Unlock()
+	return
 }
 
-func (s *Song) AlbumGain() string {
-	/*if s.again == "" {
-		return "?"
-	}*/
-	return s.again
+// MT safe
+func (s *Song) SetGain(g string, t GainType) {
+	s.gainLock.Lock()
+	switch t {
+	case GAIN_ALBUM:
+		s.again = g
+	case GAIN_TRACK:
+		s.tgain = g
+	}
+	s.gainLock.Unlock()
 }
 
-// TODO merge this and album function into one, with each type being optional
-func (s *Song) LoadTrackGain() string {
+func (s *Song) LoadGain(t GainType) (string, error) {
 	ret := ""
+	var err error
 	switch s.format {
 	case FLAC:
-		ret = flacGetTagGain(s.path, "REPLAYGAIN_TRACK_GAIN")
+		ret, err = flacGetTagGain(s.path, t)
 	case OGG_VORBIS:
-		ret = vorbisGetTagGain(s.path, "REPLAYGAIN_TRACK_GAIN")
+		ret, err = vorbisGetTagGain(s.path, t)
 	case MP3:
-		ret = mp3GetTagGain(s.path, GAIN_TRACK)
+		ret, err = mp3GetTagGain(s.path, t)
 	}
 	
 	if ret == "" {
-		return "?" 
+		return "?", err
 	}
-	return ret
-}
-
-func (s *Song) LoadAlbumGain() string {
-	ret := ""
-	switch s.format {
-	case FLAC:
-		ret = flacGetTagGain(s.path, "REPLAYGAIN_ALBUM_GAIN")
-	case OGG_VORBIS:
-		ret = vorbisGetTagGain(s.path, "REPLAYGAIN_ALBUM_GAIN")
-	case MP3:
-		ret = mp3GetTagGain(s.path, GAIN_ALBUM)
-	}
-	
-	if ret == "" {
-		return "?" 
-	}
-	return ret
+	return ret, err
 }
 
 func (s *Song) UntagGain(songUpdateReceiver func(*Song)) error {
@@ -126,8 +126,10 @@ func (s *Song) UntagGain(songUpdateReceiver func(*Song)) error {
 		return errors.New("unknown format type")
 	}
 	
-	s.tgain = s.LoadTrackGain()
-	s.again = s.LoadAlbumGain()
+	s.gainLock.Lock()
+	s.tgain, _ = s.LoadGain(GAIN_TRACK)
+	s.again, _ = s.LoadGain(GAIN_ALBUM)
+	s.gainLock.Unlock()
 	songUpdateReceiver(s)
 	return err
 }
@@ -155,8 +157,8 @@ func SongsUntagGain(list []*Song, songUpdateReceiver func(*Song)) error {
 	mp3UntagGain(mp3)
 	
 	for _, s := range list {
-		s.tgain = "?"
-		s.again = "?"
+		s.SetGain("?", GAIN_TRACK)
+		s.SetGain("?", GAIN_ALBUM)
 		s.album.tagged = false
 		songUpdateReceiver(s)
 	}

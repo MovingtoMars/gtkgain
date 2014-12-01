@@ -19,7 +19,7 @@ func (v *Album) addSong(s *Song) {
 	} else if v.format != s.format {
 		v.format = UNKNOWN
 	}
-	v.tagged = v.tagged && (s.AlbumGain() != "?")
+	v.tagged = v.tagged && (s.Gain(GAIN_ALBUM) != "?")
 	v.songs = append(v.songs, s)
 }
 
@@ -50,11 +50,11 @@ func (v *Album) TagGain(songUpdateReceiver func(*Song)) error {
 	
 	switch v.format {
 	case FLAC:
-		err = flacTagGainAlbum(paths)
+		err = flacTagGain(paths, GAIN_ALBUM)
 	case OGG_VORBIS:
-		err = vorbisTagGainAlbum(paths)
+		err = vorbisTagGain(paths, GAIN_ALBUM)
 	case MP3:
-		err = mp3TagGainAlbum(paths)
+		err = mp3TagGain(paths, GAIN_ALBUM)
 	case UNKNOWN:
 		return errors.New("can't tag unknown/inconsistently formatted album")
 	default:
@@ -62,9 +62,11 @@ func (v *Album) TagGain(songUpdateReceiver func(*Song)) error {
 	}
 	
 	for _, s := range v.songs {
-		s.tgain = s.LoadTrackGain()
-		s.again = s.LoadAlbumGain()
+		s.gainLock.Lock()
+		s.tgain, _ = s.LoadGain(GAIN_TRACK)
+		s.again, _ = s.LoadGain(GAIN_ALBUM)
 		v.tagged = true
+		s.gainLock.Unlock()
 		songUpdateReceiver(s)
 	}
 	return err
