@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/MovingtoMars/gotk3/glib"
 	"github.com/MovingtoMars/gotk3/gtk"
-	//"github.com/MovingtoMars/gotk3/gdk"
+	"github.com/MovingtoMars/gotk3/gdk"
 	"github.com/MovingtoMars/gtkgain/src/library"
 
 	"log"
@@ -23,12 +23,13 @@ type window struct {
 	pbar      *gtk.ProgressBar
 	paths     map[string]*gtk.TreePath
 	menu *gtk.Menu
+	accelGroup *gtk.AccelGroup
 	
 	importHelperChan chan string
 	
 	tagUntaggedButton, untagTaggedButton *gtk.Button
 	spinner                              *gtk.Spinner
-	fcButton                             *gtk.Button
+	fcButton, clearButton                *gtk.Button
 	inTask                               bool
 	taskProgress, taskTotal int
 
@@ -72,6 +73,13 @@ func (w *window) setupHeaderBar() {
 	w.headerBar.PackEnd(w.fcButton)
 	w.fcButton.Connect("clicked", w.onFcButtonClick)
 	w.fcButton.SetTooltipText("Add a folder")
+	w.fcButton.AddAccelerator("activate", w.accelGroup, gdk.KeyvalFromName("o"), gdk.CONTROL_MASK, gtk.ACCEL_VISIBLE)
+	
+	w.clearButton, err = gtk.ButtonNewFromIconName("edit-clear-all-symbolic", gtk.ICON_SIZE_BUTTON)
+	crashIf("Unable to create clear button", err)
+	w.headerBar.PackEnd(w.clearButton)
+	w.clearButton.Connect("clicked", w.onClearButtonClick)
+	w.clearButton.SetTooltipText("Clear all songs")
 
 	w.tagUntaggedButton, err = gtk.ButtonNewWithLabel("Tag Untagged")
 	crashIf("Unable to create taguntagged button", err)
@@ -98,6 +106,11 @@ func (w *window) setTagButtonsSensitive(s bool) {
 	w.tagUntaggedButton.SetSensitive(s)
 	w.untagTaggedButton.SetSensitive(s)
 	w.fcButton.SetSensitive(s)
+	w.clearButton.SetSensitive(s)
+}
+
+func (w *window) onClearButtonClick() {
+	w.clearAllSongs()
 }
 
 func (w *window) onSongUpdate(s *library.Song) {
@@ -115,26 +128,9 @@ func (w *window) incProgressBarFraction(delta int) {
 	w.setProgressBarFraction(w.taskProgress, w.taskTotal)
 }
 
-func (w *window) setSongGains(s *library.Song) {
-	path := w.paths[s.Path()]
-	if path == nil {
-		log.Fatal("path is nil")
-	}
-	iter, err := w.listStore.GetIter(path)
-	crashIf("Unable to convert path to iter", err)
-
-	if val, err := w.listStore.GetValue(iter, COL_PATH); err == nil {
-		if str, _ := val.GetString(); str == s.Path() {
-			w.listStore.Set(iter, []int{COL_AGAIN, COL_TGAIN}, []interface{}{s.Gain(library.GAIN_ALBUM), s.Gain(library.GAIN_TRACK)})
-		}
-	}
-	/*for iter, b := w.listStore.GetIterFirst(); b; b = w.listStore.IterNext(iter) {
-		if val, err := w.listStore.GetValue(iter, COL_PATH); err == nil {
-			if str, _ := val.GetString(); str == s.Path() {
-				w.listStore.Set(iter, []int{COL_AGAIN, COL_TGAIN}, []interface{} {s.AlbumGain(), s.TrackGain()})
-			}
-		}
-	}*/
+func (w *window) clearAllSongs() {
+	w.lib.Clear()
+	w.listStore.Clear()
 }
 
 const NUM_HELPERS = 4
@@ -246,54 +242,6 @@ func (w *window) onUntagTaggedClicked() {
 	go w.untagSongs(a)
 }
 
-const (
-	COL_TRACK = iota
-	COL_TITLE
-	COL_ALBUM
-	COL_TGAIN
-	COL_AGAIN
-	COL_PATH
-)
-
-var columnList = []int{COL_TRACK, COL_TITLE, COL_ALBUM, COL_TGAIN, COL_AGAIN, COL_PATH}
-var columnNames = []string{"Track", "Title", "Album", "Track Gain", "Album Gain", "Path"}
-
-func (w *window) setupTreeView() {
-	var err error
-	w.listStore, err = gtk.ListStoreNew(glib.TYPE_INT, glib.TYPE_STRING, glib.TYPE_STRING, glib.TYPE_STRING, glib.TYPE_STRING, glib.TYPE_STRING)
-	crashIf("Unable to create list store", err)
-
-	w.treeView, err = gtk.TreeViewNewWithModel(w.listStore)
-	crashIf("Unable to create tree view", err)
-
-	w.scroll, err = gtk.ScrolledWindowNew(nil, nil)
-	w.vbox.PackStart(w.scroll, true, true, 0)
-	w.scroll.Add(w.treeView)
-
-	for _, i := range columnList {
-		w.addColumn(i, columnNames[i], true)
-	}
-	w.treeView.Set("search-column", COL_TITLE)
-	
-	/*tentry, _ := gtk.TargetEntryNew("text/uri-list", gtk.TARGET_OTHER_APP, 0)
-	w.fcButton.DragDestSet(gtk.DEST_DEFAULT_HIGHLIGHT, []gtk.TargetEntry {*tentry}, gdk.ACTION_DEFAULT)
-	w.fcButton.Connect("drag-motion", w.onDragMotion)*/
-}
-
-func (w *window) addColumn(id int, name string, resizable bool) *gtk.TreeViewColumn {
-	cr, err := gtk.CellRendererTextNew()
-	crashIf("Unable to create cell renderer", err)
-	col, err := gtk.TreeViewColumnNewWithAttribute(name, cr, "text", id)
-	crashIf("Unable to add column", err)
-	w.treeView.AppendColumn(col)
-	col.Set("resizable", resizable)
-	return col
-}
-
-/*func (w *window) onDragMotion(widget *gtk.Button, dc *gdk.DragContext, x, y int, time uint) {
-	fmt.Println("test", x, y, gdk.Atom(dc.ListTargets().Data).Name())
-}*/
-
 func (w *window) setupMenu() {
 	menuButton, err := gtk.MenuButtonNew()
 	crashIf("Unable to create menu button", err)
@@ -311,6 +259,11 @@ func (w *window) setupMenu() {
 	about, _ := gtk.MenuItemNewWithLabel("About")
 	about.Connect("activate", func() {w.showAboutDialog()})
 	w.menu.Append(about)
+	
+	quit, _ := gtk.MenuItemNewWithLabel("Quit")
+	quit.Connect("activate", func() {w.onDestroy()})
+	w.menu.Append(quit)
+	quit.AddAccelerator("activate", w.accelGroup, gdk.KeyvalFromName("q"), gdk.CONTROL_MASK, gtk.ACCEL_VISIBLE)
 	
 	w.menu.ShowAll()
 }
@@ -333,22 +286,6 @@ func (w *window) onSongImport(s *library.Song) {
 	w.songQueueLock.Unlock()
 }
 
-func (w *window) setSpinnerForSong(spath string, going bool) {
-	path := w.paths[spath]
-	if path == nil {
-		log.Fatal("path is nil")
-	}
-	iter, err := w.listStore.GetIter(path)
-	crashIf("Unable to convert path to iter", err)
-
-	if val, err := w.listStore.GetValue(iter, COL_PATH); err == nil {
-		if str, _ := val.GetString(); str == spath {
-			//w.listStore.Set(iter, []int{COL_SPIN}, []interface{} {going})
-			w.listStore.Set(iter, []int{COL_AGAIN, COL_TGAIN}, []interface{}{"···", "···"})
-		}
-	}
-}
-
 func (w *window) onTimer() bool {
 	w.songQueueLock.Lock()
 	for _, s := range w.songQueue {
@@ -356,15 +293,6 @@ func (w *window) onTimer() bool {
 	}
 	w.songQueue = make([]*library.Song, 0)
 	w.songQueueLock.Unlock()
-
-	all := false
-
-	for !all {
-		select {
-		default:
-			all = true
-		}
-	}
 
 	glib.TimeoutAdd(150, w.onTimer)
 
@@ -387,6 +315,7 @@ func (w *window) appendSong(song *library.Song) {
 }
 
 func (w *window) onDestroy() {
+	//w.win.Destroy()
 	gtk.MainQuit()
 }
 
@@ -402,6 +331,12 @@ func createWindow(lib *library.Library) *window {
 
 	w.win, err = gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
 	crashIf("Unable to create window", err)
+	
+	w.accelGroup, err = gtk.AccelGroupNew()
+	if err != nil {
+		log.Println("Error: unable to create accelGroup")
+	}
+	w.win.AddAccelGroup(w.accelGroup)
 
 	w.win.Connect("destroy", w.onDestroy)
 

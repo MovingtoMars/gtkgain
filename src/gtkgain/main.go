@@ -24,6 +24,6 @@ func main() {
 
 func crashIf(mess string, err error) {
 	if err != nil {
-		log.Fatal(mess, err)
+		log.Fatal(mess, ": ", err)
 	}
 }
