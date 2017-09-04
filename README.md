@@ -25,6 +25,8 @@ For building:
 $ sudo apt-get install git golang golang-go.tools libgtk-3-dev libtagc0-dev libvorbis-dev mp3gain flac vorbisgain
 ```
 
+**Note: Ubuntu 14.04 Trusty is the most recent Ubuntu release to include `mp3gain`. Now it is unavailable.**
+
 Make sure the `universe` repo is enabled in Software and Updates.
 
 ## Installation
